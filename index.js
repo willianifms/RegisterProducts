@@ -125,7 +125,7 @@ server.get("/Login", (requisicao, resposta) => {
     <form action='/login' method='POST' id="loginForm">
         <div class="mb-3">
             <label class="form-label">E-mail</label>
-            <input type="text" class="form-control" id="usuario" name="usuario" placeholder="teste@teste.com" required>
+            <input type="text" class="form-control" id="usuario" name="usuario" placeholder="admin" required>
         </div>
 
         <div class="mb-3">
@@ -203,7 +203,7 @@ server.post("/login", (requisicao, resposta) => {
     <form action='/login' method='POST' id="loginForm">
         <div class="mb-3">
             <label class="form-label">E-mail</label>
-            <input type="text" class="form-control" id="usuario" name="usuario" placeholder="teste@teste.com" required>
+            <input type="text" class="form-control" id="usuario" name="usuario" placeholder="admin" required>
         </div>
 
         <div class="mb-3">
