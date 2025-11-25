@@ -1,4 +1,6 @@
 import express from "express";
+import cookieParser from "cookie-parser";
+import session from "express-session";
 
 const host = "0.0.0.0";
 const porta = 3000;
@@ -6,13 +8,28 @@ var listaProdutos = [];
 
 const server = express();
 
+server.use(session({
+    secret: "Minh@ChaveExtremamenteGrandeComIssoElaTambemFicaSeguraMaisQuePortoSeguro12345@",
+    resave: true,
+    saveUninitialized: true,
+    cookie: {
+        maxAge: 1000 * 60 * 30 // 30min
+    }
+}));
+
+
+
 server.use(express.urlencoded({ extended: true }));
 
 server.get("/logout", (requisicao, resposta) => {
-    resposta.send(`<h1>Logout efetuado com sucesso!</h1>`);
+    requisicao.session.destroy();
+    resposta.redirect("/login");
 });
 
-server.get("/", (requisicao, resposta) => {
+server.get("/", verificaAuth, (requisicao, resposta) => {
+    let ultimoAcesso = requisicao.cookies?.ultimoAcesso;
+    const dataAtual = new Date().toLocaleDateString(); // já vai deixar a data em pt-br
+    resposta.cookie("ultimoAcesso",dataAtual);
     resposta.send(`
         <DOCTYPE html>
         <html>
@@ -52,6 +69,15 @@ server.get("/", (requisicao, resposta) => {
                         <a class="nav-link active" aria-current="page" href="/login">Entrar</a>
                         </li>
                     </ul>
+                    </div>
+                </div>
+
+                 <div class="container-fluid">
+                    <div class="d-flex">
+                        <div class="p-2">
+                            <p>Último acesso: ${ultimoAcesso || "Primeiro acesso"}</p>
+                            <p>Último acesso: ${dataAtual}</p>
+                        </div>
                     </div>
                 </div>
                 </nav>
@@ -96,15 +122,15 @@ server.get("/Login", (requisicao, resposta) => {
 <div class="login-card">
     <h3 class="text-center login-title mb-4">Entrar</h3>
 
-    <form id="loginForm">
+    <form action='/login' method='POST' id="loginForm">
         <div class="mb-3">
             <label class="form-label">E-mail</label>
-            <input type="email" class="form-control" id="email" placeholder="teste@teste.com">
+            <input type="text" class="form-control" id="usuario" name="usuario" placeholder="teste@teste.com" required>
         </div>
 
         <div class="mb-3">
             <label class="form-label">Senha</label>
-            <input type="password" class="form-control" id="senha" placeholder="123">
+            <input type="password" class="form-control" id="senha" placeholder="123" required name="senha">
         </div>
 
         <button type="submit" class="btn btn-primary w-100 mt-3">Acessar</button>
@@ -114,38 +140,97 @@ server.get("/Login", (requisicao, resposta) => {
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
-<script>
-document.getElementById("loginForm").addEventListener("submit", function(e) {
-    e.preventDefault();
 
-    const email = document.getElementById("email").value.trim();
-    const senha = document.getElementById("senha").value.trim();
-
-    const emailCorreto = "teste@teste.com";
-    const senhaCorreta = "123";
-
-    if (email === emailCorreto && senha === senhaCorreta) {
-        alert("Login realizado com sucesso!");
-
-        window.location.href = "/";
-    } else {
-        alert("Usuário ou senha incorretos!");
-    }
-
-});
-</script>
 
 </body>
 </html>
 
-`); 
+`);
 
 });
 
-// Rotas de Produto
-// ------------------------------------------------------------------
 
-server.get("/cadastroProduto", (requisicao, resposta) => {
+server.post("/login", (requisicao, resposta) => {
+    const { usuario, senha } = requisicao.body;
+
+    if (usuario === "admin" && senha === "admin") {
+        requisicao.session.dadosLogin = {
+            nome: "Administrador",
+            logado: true
+        };
+        resposta.redirect("/");
+    } else {
+        resposta.write(`
+            
+        <!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login Produto</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: #f2f5f9;
+        }
+
+        .login-card {
+            max-width: 400px;
+            margin: 80px auto;
+            padding: 30px;
+            border-radius: 20px;
+            background: #ffffff;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .login-title {
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-3"></div>
+    <div class="alert alert-danger" role="alert">
+        Usuário ou senha inválidos!
+    </div>
+</div>
+<div class="login-card">
+
+    <h3 class="text-center login-title mb-4">Entrar</h3>
+
+    <form action='/login' method='POST' id="loginForm">
+        <div class="mb-3">
+            <label class="form-label">E-mail</label>
+            <input type="text" class="form-control" id="usuario" name="usuario" placeholder="teste@teste.com" required>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Senha</label>
+            <input type="password" class="form-control" id="senha" placeholder="123" required name="senha">
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100 mt-3">Acessar</button>
+    </form>
+
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+
+
+</body>
+</html>
+
+        `);
+    }
+
+});
+
+
+server.get("/cadastroProduto", verificaAuth, (requisicao, resposta) => {
     resposta.send(`
         <DOCTYPE html>
     <html>
@@ -183,7 +268,7 @@ server.get("/cadastroProduto", (requisicao, resposta) => {
                 
                 <div class="col-md-6">
                     <label for="validade" class="form-label">Data de Validade</label>
-                    <input type="date" class="form-control" id="validade" name="validade">
+                    <input type="date" class="form-control" id="validade" name="validade required">
                 </div>
 
                 <div class="col-md-6">
@@ -207,7 +292,7 @@ server.get("/cadastroProduto", (requisicao, resposta) => {
     `);
 })
 
-server.post('/adicionarProduto', (requisicao, resposta) => {
+server.post('/adicionarProduto', verificaAuth, (requisicao, resposta) => {
     const descricao = requisicao.body.descricao;
     const custo = requisicao.body.custo;
     const venda = requisicao.body.venda;
@@ -288,7 +373,7 @@ server.post('/adicionarProduto', (requisicao, resposta) => {
     }
 });
 
-server.get("/listarProduto", (requisicao, resposta) => {
+server.get("/listarProduto", verificaAuth, (requisicao, resposta) => {
     let conteudo = `
         <DOCTYPE html>
         <html>
@@ -336,6 +421,15 @@ server.get("/listarProduto", (requisicao, resposta) => {
     `
     resposta.send(conteudo);
 });
+
+function verificaAuth(requisicao, resposta, prox) {
+    if (requisicao.session.dadosLogin?.logado) {
+        prox();
+    } else {
+        resposta.redirect("/login");
+    }
+
+}
 
 server.listen(porta, host, () => {
     console.log(`Servidor rodando em http://${host}:${porta}`)
